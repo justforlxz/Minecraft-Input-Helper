@@ -4,6 +4,10 @@
 #
 #-------------------------------------------------
 
+isEmpty(PREFIX) {
+    PREFIX = /usr
+}
+
 QT       += core gui network x11extras
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
