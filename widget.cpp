@@ -26,51 +26,18 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QX11Info>
-
-// Send a fake keystroke event to an X window.
-// by Adam Pierce - http://www.doctort.org/adam/
-// This is public domain software. It is free to use by anyone for any purpose.
+#include <QKeyEvent>
 
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
-
-// The key code to be sent.
-// A full list of available codes can be found in /usr/include/X11/keysymdef.h
+#include <X11/extensions/XTest.h>
 
 DWIDGET_USE_NAMESPACE
-
-// Function to create a keyboard event
-XKeyEvent createKeyEvent(Display *display, Window &win,
-                           Window &winRoot, bool press,
-                           int keycode, int modifiers)
-{
-   XKeyEvent event;
-
-   event.display     = display;
-   event.window      = win;
-   event.root        = winRoot;
-   event.subwindow   = None;
-   event.time        = CurrentTime;
-   event.x           = 1;
-   event.y           = 1;
-   event.x_root      = 1;
-   event.y_root      = 1;
-   event.same_screen = True;
-   event.keycode     = XKeysymToKeycode(display, keycode);
-   event.state       = modifiers;
-
-   if(press)
-      event.type = KeyPress;
-   else
-      event.type = KeyRelease;
-
-   return event;
-}
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
     , m_mcWindow(nullptr)
-    , m_mcIsActive(false)
+    , m_isActive(false)
 {
     setWindowFlags(Qt::BypassWindowManagerHint);
 
@@ -84,25 +51,23 @@ Widget::Widget(QWidget *parent)
 
     setLayout(layout);
 
-    QLineEdit *edit = new QLineEdit;
-    layout->addWidget(edit);
+    m_lineEdit = new QLineEdit;
+    layout->addWidget(m_lineEdit);
 
-    connect(edit, &QLineEdit::returnPressed, this, [=] {
-        QClipboard *clipboard = QApplication::clipboard();
-        clipboard->setText(edit->text(), QClipboard::Clipboard);
-        edit->clear();
-        hide();
-        QTimer::singleShot(100, this, [=] {
-            QProcess::startDetached("xdotool key --delay 200 --clearmodifiers ctrl+v && xdotool key --delay 100 --clearmodifiers \"Return\"");
-        });
-    });
+    connect(m_lineEdit, &QLineEdit::returnPressed, this, &Widget::onInputFinished);
 
     m_wmHelper = DWindowManagerHelper::instance();
     connect(m_wmHelper, &DWindowManagerHelper::windowListChanged, this, &Widget::onWindowListChanged);
     onWindowListChanged();
 
     connect(m_monitor, &EventMonitor::keyPress, this, [=] (int code) {
-        if (code == 28 && m_mcIsActive && m_mcWindow) {
+        if (!m_isActive)
+            return;
+
+        if (code == 9 && isVisible())
+            hide();
+
+        if (code == 28 && m_mcWindow && m_isActive && !isVisible()) {
             move(m_mcWindow->geometry().left(), m_mcWindow->geometry().y() + m_mcWindow->geometry().height());
             resize(m_mcWindow->geometry().width(), 20);
             show();
@@ -121,17 +86,42 @@ void Widget::onWindowListChanged()
     QList<DForeignWindow*> list = m_wmHelper->currentWorkspaceWindows();
     for (DForeignWindow *window : list) {
         if (window->wmClass() == "Minecraft 1.12") {
-            Window w;
-            int revert_to;
-            XGetInputFocus(QX11Info::display(), &w, &revert_to);
-            if (w == None) {
-                return;
-            }
-            m_mcIsActive = true;
             m_mcWindow = window;
+            m_isActive = true;
             return;
         }
     }
-    m_mcIsActive = false;
+
+    if (m_mcWindow)
+        m_mcWindow->deleteLater();
     m_mcWindow = nullptr;
+    m_isActive = false;
+}
+
+void Widget::onInputFinished()
+{
+    const QString &value = m_lineEdit->text();
+    QClipboard *clipboard = QApplication::clipboard();
+    clipboard->setText(value, QClipboard::Clipboard);
+
+    m_lineEdit->clear();
+    hide();
+
+    Display *display = QX11Info::display();
+
+    XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_Control_L), True, CurrentTime);
+    XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_V), True, CurrentTime);
+    XFlush(display);
+
+    QTimer::singleShot(200, this, [=] {
+        XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_V), False, CurrentTime);
+        XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_Control_L), False, CurrentTime);
+        XFlush(display);
+
+        XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_Return), True, CurrentTime + value.size() * 10);
+        XFlush(display);
+
+        XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_Return), False, CurrentTime + value.size() * 10);
+        XFlush(display);
+    });
 }

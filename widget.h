@@ -27,6 +27,7 @@
 
 DWIDGET_USE_NAMESPACE
 
+class QLineEdit;
 class Widget : public QWidget
 {
     Q_OBJECT
@@ -34,13 +35,17 @@ public:
     Widget(QWidget *parent = 0);
     ~Widget();
 
+private slots:
     void onWindowListChanged();
+    void onInputFinished();
+
 private:
     QUdpSocket *m_socket;
     DWindowManagerHelper *m_wmHelper;
     EventMonitor *m_monitor;
     DForeignWindow *m_mcWindow;
-    bool m_mcIsActive;
+    QLineEdit *m_lineEdit;
+    bool m_isActive;
 };
 
 #endif // WIDGET_H

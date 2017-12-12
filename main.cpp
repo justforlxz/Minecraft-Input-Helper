@@ -19,6 +19,10 @@
 #include "widget.h"
 
 #include <DApplication>
+#include <QX11Info>
+#include <X11/Xlib.h>
+#include <X11/keysym.h>
+#include <X11/extensions/XTest.h>
 
 DWIDGET_USE_NAMESPACE
 
@@ -27,6 +31,25 @@ int main(int argc, char *argv[])
     DApplication::loadDXcbPlugin();
     DApplication a(argc, argv);
     a.setTheme("light");
+
+//    QCommandLineParser parser;
+//    parser.addHelpOption();
+
+//    QCommandLineOption p(QStringList() << "m" << "mod", "If the mod is used, the message will be sent using the network", "");
+//    parser.addOption(p);
+
+//    parser.process(a);
+
+//    QString strValue = parser.value("m");
+
+//    // 从命令行启动，发送虚假的T，打开输入界面
+//    Display *display = QX11Info::display();
+
+//    XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_T), True, CurrentTime);
+//    XFlush(display);
+
+//    XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_T), False, CurrentTime);
+//    XFlush(display);
 
     Widget w;
 
