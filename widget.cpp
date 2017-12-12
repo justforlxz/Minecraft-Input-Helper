@@ -32,6 +32,8 @@
 #include <X11/keysym.h>
 #include <X11/extensions/XTest.h>
 
+#define MC_VERSION "Minecraft 1.12"
+
 DWIDGET_USE_NAMESPACE
 
 Widget::Widget(QWidget *parent)
@@ -61,7 +63,7 @@ Widget::Widget(QWidget *parent)
     onWindowListChanged();
 
     connect(m_monitor, &EventMonitor::keyPress, this, [=] (int code) {
-        if (!m_isActive)
+        if (!m_isActive && !isVisible())
             return;
 
         if (code == 9 && isVisible())
@@ -83,11 +85,11 @@ Widget::~Widget()
 
 void Widget::onWindowListChanged()
 {
+    onGetCurrentFocusWindow();
     QList<DForeignWindow*> list = m_wmHelper->currentWorkspaceWindows();
     for (DForeignWindow *window : list) {
-        if (window->wmClass() == "Minecraft 1.12") {
+        if (window->wmClass() == MC_VERSION) {
             m_mcWindow = window;
-            m_isActive = true;
             return;
         }
     }
@@ -95,7 +97,6 @@ void Widget::onWindowListChanged()
     if (m_mcWindow)
         m_mcWindow->deleteLater();
     m_mcWindow = nullptr;
-    m_isActive = false;
 }
 
 void Widget::onInputFinished()
@@ -118,10 +119,21 @@ void Widget::onInputFinished()
         XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_Control_L), False, CurrentTime);
         XFlush(display);
 
-        XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_Return), True, CurrentTime + value.size() * 10);
+        XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_Return), True, CurrentTime + value.size() * 5);
         XFlush(display);
 
-        XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_Return), False, CurrentTime + value.size() * 10);
+        XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_Return), False, CurrentTime + value.size() * 5);
         XFlush(display);
     });
+}
+
+void Widget::onGetCurrentFocusWindow()
+{
+    QProcess *process = new QProcess(this);
+    connect(process, &QProcess::readyRead, this, [=] {
+        m_isActive = process->readAll().replace("\n","") == MC_VERSION;
+        process->deleteLater();
+    });
+
+    process->start("xdotool getwindowfocus getwindowname");
 }

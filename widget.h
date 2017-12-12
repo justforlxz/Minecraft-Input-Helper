@@ -38,6 +38,7 @@ public:
 private slots:
     void onWindowListChanged();
     void onInputFinished();
+    void onGetCurrentFocusWindow();
 
 private:
     QUdpSocket *m_socket;
