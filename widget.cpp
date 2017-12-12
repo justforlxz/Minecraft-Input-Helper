@@ -93,7 +93,7 @@ Widget::Widget(QWidget *parent)
         edit->clear();
         hide();
         QTimer::singleShot(100, this, [=] {
-            QProcess::startDetached("xdotool key --delay 100 --clearmodifiers ctrl+v && xdotool key --delay 100 --clearmodifiers \"Return\"");
+            QProcess::startDetached("xdotool key --delay 200 --clearmodifiers ctrl+v && xdotool key --delay 100 --clearmodifiers \"Return\"");
         });
     });
 
