@@ -1,7 +1,6 @@
 [Desktop Entry]
-Categories=Application;System;Settings
+Categories=Utility;
 Comment=Minecraft chinese input helper
-Encoding=UTF-8
 Exec=/usr/bin/minecraft-input-helper
 Icon=minecraft
 Name=Minecraft Input Helper
