@@ -32,7 +32,7 @@
 #include <X11/keysym.h>
 #include <X11/extensions/XTest.h>
 
-#define MC_VERSION "Minecraft 1.12"
+#define MC_VERSION "Minecraft 1.12.2"
 
 DWIDGET_USE_NAMESPACE
 
@@ -66,8 +66,15 @@ Widget::Widget(QWidget *parent)
         if (!m_isActive && !isVisible())
             return;
 
-        if (code == 9 && isVisible())
+        if (code == 9 && isVisible()) {
             hide();
+            Display *display = QX11Info::display();
+            XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_Return), True, CurrentTime);
+            XFlush(display);
+
+            XTestFakeKeyEvent(display, XKeysymToKeycode(display, XK_Return), False, CurrentTime);
+            XFlush(display);
+        }
 
         if (code == 28 && m_mcWindow && m_isActive && !isVisible()) {
             move(m_mcWindow->geometry().left(), m_mcWindow->geometry().y() + m_mcWindow->geometry().height());
